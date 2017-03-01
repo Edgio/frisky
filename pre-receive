@@ -1,0 +1,6 @@
+#!/bin/bash
+
+#
+#grep -Prin "(host|host_?name|host_?addr|ip|ip_?addr|ip_?address) ?= ?['\"](1(?!(27|0|92)\.)|[2-9]+)" *
+#grep -Prin "(password|passwd|pass) ?= ?['\"](?!(['\"]))" *
+#grep -Prin "(\.(verizon|edgecast).*\.(net|com):(?!(80|443)\b))" *
