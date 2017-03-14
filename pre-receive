@@ -602,7 +602,7 @@ parser.add_argument('--no-colour', action='store_true',
 parser.add_argument('--json', action='store_true',
                     help='Produce JSON output.  Implies --no-colour, overrides --verbose')
 parser.add_argument('--sanity-filename', type=str, default=".vz_sane",
-                    help='Filename holding JSON sanity overrides in the form: [{"path": "path/to/my_dangerous_file.cc", "content": "totally_safe_ip = \\"123.111.0.0\\";"}...]')
+                    help='Filename holding JSON sanity overrides in the form: [{"path": "./path/to/my_dangerous_file.cc", "content": "totally_safe_ip = \\"123.111.0.0\\";"}...]')
 parser.add_argument('--warnings', action='store_true',
                     help='Print violations that have been overriden for sanity.')
 parser.add_argument('--verbose', action='store_true',
@@ -778,7 +778,7 @@ def get_violations(a_path):
 
     # look for the optional ".vz_sane" in top level of a_path
     # JSON file that defines the file/content that is deemed sane to release
-    # e.g. [{"path": "path/to/my_dangerous_file.cc", "content": "totally_safe_ip = \"123.111.0.0\";"}, ...]
+    # e.g. [{"path": "./path/to/my_dangerous_file.cc", "content": "totally_safe_ip = \"123.111.0.0\";"}, ...]
     sanity_overrides = []
     try:
         with open(os.path.join(args.sanity_filename), 'r') as sanity_file:
