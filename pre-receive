@@ -23,14 +23,14 @@ signatures = [
   {
       "part": "contents",
       "type": "regex",
-      "pattern": "(host|host_?name|host_?addr|ip|ip_?addr|ip_?address) ?= ?['\"](1(?!(27|0|92)\\.)|[2-9]+)",
+      "pattern": "(host|host_?name|host_?addr|ip|ip_?addr|ip_?address)['\"]? ?[=:] ?['\"](1(?!(27|0|92)\\.)|[2-9]+)",
       "caption": "non RFC-1918 IP address",
       "description": None
   },
   {
       "part": "contents",
       "type": "regex",
-      "pattern": "(password|passwd|pass) ?= ?['\"](?!(['\"]))",
+      "pattern": "(password|passwd|pass)['\"]? ?[=:] ?['\"](?!(['\"]))",
       "caption": "static passwords",
       "description": None
   },
@@ -599,14 +599,15 @@ parser.add_argument('--match', action='store_true',
                     help='Print the matching value')
 parser.add_argument('--no-colour', action='store_true',
                     help='No colour output.')
-parser.add_argument('--json', action='store_true',
-                    help='Produce JSON output.  Implies --no-colour, overrides --verbose')
 parser.add_argument('--sanity-filename', type=str, default=".vz_sane",
                     help='Filename holding JSON sanity overrides in the form: [{"path": "./path/to/my_dangerous_file.cc", "content": "totally_safe_ip = \\"123.111.0.0\\";"}...]')
+parser.add_argument('--generate-sanity', action="store_true", help=argparse.SUPPRESS)
 parser.add_argument('--warnings', action='store_true',
                     help='Print violations that have been overriden for sanity.')
 parser.add_argument('--verbose', action='store_true',
                     help='Be noisy.  Implies --match and --warnings')
+parser.add_argument('--json', action='store_true',
+                    help='Produce JSON output.  Implies --no-colour, --warnings, overrides --verbose')
 args = parser.parse_args()
 
 if args.verbose:
@@ -783,7 +784,7 @@ def get_violations(a_path):
     try:
         with open(os.path.join(args.sanity_filename), 'r') as sanity_file:
             sanity_overrides = json.load(sanity_file)
-    except IOError, e:
+    except Exception, e:
         pass
 
     violations = []
@@ -794,17 +795,24 @@ def get_violations(a_path):
             continue
         for file in files:
             l_path = os.path.join(subdir, file)
+            if file == ".vz_sane":
+                continue
             verbose("Analyzing %s..." % (os.path.join(a_path, file)))
-            l_violations = get_file_violations(subdir, file)
+            l_raw_violations = get_file_violations(subdir, file)
             l_warnings = []
-            for idx,v in enumerate(l_violations):
+            l_violations = []
+            for idx,v in enumerate(l_raw_violations):
+
+                is_warning = False
                 for o in sanity_overrides:
                     if ("path" in o and
-                        o["path"] == l_path and
                         "content" in o and
+                        o["path"] == l_path and
                         o["content"] == v["data"]):
                         l_warnings.append(v)
-                        del l_violations[idx]
+                        is_warning = True
+                if not is_warning:
+                    l_violations.append(v)
 
             if (l_violations or
                 l_warnings):
@@ -820,7 +828,17 @@ def get_violations(a_path):
 violations = get_violations(args.PATH)
 
 if args.json:
-    print json.dumps(violations)
+    if args.generate_sanity:
+        #Produce special output useul for the .vz_sane file
+        sane = []
+        for v in violations:
+            for v_details in v["violations"]:
+                #print k,v_details
+                sane.append({"path": v["path"],
+                             "content": v_details["data"]})
+        print json.dumps(sane)
+    else:
+        print json.dumps(violations)
 else:
     for v in violations:
         for v_details in v["violations"]:
@@ -833,22 +851,25 @@ else:
                                                                 red(v_details["data"]),
                                                                 green(v_details["signature"]["pattern"]))
             else:
-                print "%s has %s %s" % (v["path"],
-                                        yellow(v_details["signature"]["caption"]),
-                                        v_details["signature"]["part"])
-        for v_details in v["warnings"]:
-            #print k,v_details
-            if args.match:
-                print "WARNING: %s%s has %s %s %s matches pattern %s" % (v["path"],
-                                                                            ":" + str(v_details["line_number"]) if "line_number" in v_details else "",
-                                                                            yellow(v_details["signature"]["caption"]),
-                                                                            v_details["signature"]["part"],
-                                                                            cyan(v_details["data"]),
-                                                                            green(v_details["signature"]["pattern"]))
-            else:
-                print "WARNING: %s has %s %s" % (v["path"],
-                                                 yellow(v_details["signature"]["caption"]),
-                                                 v_details["signature"]["part"])
+                print "%s%s has %s %s" % (v["path"],
+                                          ":" + str(v_details["line_number"]) if "line_number" in v_details else "",
+                                          yellow(v_details["signature"]["caption"]),
+                                          v_details["signature"]["part"])
+        if args.warnings:
+            for v_details in v["warnings"]:
+                #print k,v_details
+                if args.match:
+                    print "WARNING: %s%s has %s %s %s matches pattern %s" % (v["path"],
+                                                                                ":" + str(v_details["line_number"]) if "line_number" in v_details else "",
+                                                                                yellow(v_details["signature"]["caption"]),
+                                                                                v_details["signature"]["part"],
+                                                                                cyan(v_details["data"]),
+                                                                                green(v_details["signature"]["pattern"]))
+                else:
+                    print "WARNING: %s%s has %s %s" % (v["path"],
+                                                       ":" + str(v_details["line_number"]) if "line_number" in v_details else "",
+                                                       yellow(v_details["signature"]["caption"]),
+                                                       v_details["signature"]["part"])
 
 # fail if violations found
 sys.exit(1 if len(violations) > 0 else 0)
