@@ -29,8 +29,8 @@ parser.add_argument('PATH', type=str,
                     help='The directory to analyze')
 parser.add_argument('--first', action='store_true',
                     help='Exit on the first file that violates our rules')
-# parser.add_argument('--peak-of-peaks', action='store_true',
-#                     help='Get peak of peaks for last 24 hours')
+parser.add_argument('--verbose', action='store_true',
+                    help='Be noisy')
 # parser.add_argument('--json', action='store_true',
 #                     help='Produce JSON output')
 # parser.add_argument('--marlin', action='store_true',
@@ -53,6 +53,10 @@ with open("gitrob_signatures.json") as signatures_file:
     signatures = json.load(signatures_file)
 
 
+def verbose(a_string):
+    if args.verbose:
+        print a_string
+
 # /// \brief   perform a match
 # /// \details
 # /// \return  The data that matched if it dide
@@ -62,9 +66,14 @@ with open("gitrob_signatures.json") as signatures_file:
 # /// \param   a_type 'regex' or 'match' to regex or exact match data with pattern
 def do_match(a_data, a_pattern, a_type):
 
+#     print """data: %s
+# pattern: %s
+# type: %s""" % (a_data, a_pattern, a_type)
+
     if a_type == "regex":
-        match = re.compile(a_pattern, re.IGNORECASE).match(a_data)
+        match = re.compile(a_pattern, re.IGNORECASE).search(a_data)
         if match:
+            # DA TODO: return all contents that matched
             return match.group(0)
     elif a_type == "match":
         if a_data == a_pattern:
@@ -119,7 +128,7 @@ for subdir, dirs, files in os.walk(args.PATH):
         continue
     violations = {}
     for file in files:
-        print "Analyzing %s..." % (os.path.join(subdir, file))
+        verbose("Analyzing %s..." % (os.path.join(subdir, file)))
         l_violations = get_file_violations(subdir, file)
         if l_violations:
             violations[os.path.join(subdir, file)] = l_violations
@@ -128,5 +137,5 @@ for subdir, dirs, files in os.walk(args.PATH):
 
     for k,v in violations.iteritems():
         for v_details in v:
-            print k,v_details
-            print "File %s has %s" % (k,v_details["signature"]["caption"])
+            #print k,v_details
+            print "File %s has %s: %s matches pattern: %s" % (k, v_details["signature"]["caption"], v_details["signature"]["part"], v_details["data"])
