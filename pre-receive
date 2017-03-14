@@ -774,23 +774,27 @@ def get_file_violations(a_subdir, a_filename):
 # /// \param   a_path     The file path to analyze
 def get_violations(a_path):
 
-    # look for the optional ".vz_sane" JSON file that defines the file/content that is deemed sane to release
+    os.chdir(a_path)
+
+    # look for the optional ".vz_sane" in top level of a_path
+    # JSON file that defines the file/content that is deemed sane to release
+    # e.g. [{"path": "path/to/my_dangerous_file.cc", "content": "totally_safe_ip = \"123.111.0.0\";"}, ...]
     sanity_overrides = []
     try:
-        with open(os.path.join(a_path, args.sanity_filename), 'r') as sanity_file:
+        with open(os.path.join(args.sanity_filename), 'r') as sanity_file:
             sanity_overrides = json.load(sanity_file)
     except IOError, e:
         pass
 
     violations = []
     warnings = []
-    for subdir, dirs, files in os.walk(a_path):
+    for subdir, dirs, files in os.walk("."):
         if "/.git" in subdir:
             # don't process git directories
             continue
         for file in files:
             l_path = os.path.join(subdir, file)
-            verbose("Analyzing %s..." % (l_path))
+            verbose("Analyzing %s..." % (os.path.join(a_path, file)))
             l_violations = get_file_violations(subdir, file)
             l_warnings = []
             for idx,v in enumerate(l_violations):
