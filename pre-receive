@@ -599,14 +599,99 @@ parser.add_argument('--match', action='store_true',
                     help='Print the matching value')
 parser.add_argument('--verbose', action='store_true',
                     help='Be noisy.  Implies --match')
+parser.add_argument('--no-colour', action='store_true',
+                    help='No colour output.')
 parser.add_argument('--json', action='store_true',
-                    help='Produce JSON output.  Overrides --verbose')
+                    help='Produce JSON output.  Implies --no-colour, overrides --verbose')
 args = parser.parse_args()
 
 if args.verbose:
     args.match = True
 
 
+
+# /// \brief   echo something in red
+# /// \details
+# /// \return
+# /// \param   1 The string to print in red
+# /// \status  ALPHA
+def red(a_string):
+    if not args.no_colour:
+        return "\x1b[0;31m" + a_string + "\x1b[00m"
+    else:
+        return a_string
+
+
+# /// \brief   echo something in cyan
+# /// \details
+# /// \return
+# /// \param   1 The string to print in cyan
+# /// \status  ALPHA
+def cyan(a_string):
+    if not args.no_colour:
+        return "\x1b[0;36m" + a_string + "\x1b[00m"
+    else:
+        return a_string
+
+# /// \brief   echo something in green
+# /// \details
+# /// \return
+# /// \param   1 The string to print in green
+# /// \status  ALPHA
+def green(a_string):
+    if not args.no_colour:
+        return "\x1b[0;32m" + a_string + "\x1b[00m"
+    else:
+        return a_string
+
+# /// \brief   echo something in yellow
+# /// \details
+# /// \return
+# /// \param   1 The string to print in yellow
+# /// \status  ALPHA
+def yellow(a_string):
+    if not args.no_colour:
+        return "\x1b[0;33m" + a_string + "\x1b[00m"
+    else:
+        return a_string
+
+# /// \brief   echo something in white
+# /// \details
+# /// \return
+# /// \param   1 The string to print in white
+# /// \status  ALPHA
+def white(a_string):
+    if not args.no_colour:
+        return "\x1b[0;37m" + a_string + "\x1b[00m"
+    else:
+        return a_string
+
+# /// \brief   echo something in underline
+# /// \details
+# /// \return
+# /// \param   1 The string to print in white
+# /// \status  ALPHA
+def underline(a_string):
+    if not args.no_colour:
+        return "\x1b[0;4m" + a_string + "\x1b[00m"
+    else:
+        return a_string
+
+# /// \brief   echo something in bold
+# /// \details
+# /// \return
+# /// \param   1 The string to print in white
+# /// \status  ALPHA
+def bold(a_string):
+    if not args.no_colour:
+        return "\x1b[0;1m" + a_string + "\x1b[00m"
+    else:
+        return a_string
+
+# /// \brief   print something only if verbose
+# /// \details
+# /// \return  None
+# /// \param   a_string The string to be printed (or not)
 def verbose(a_string):
     if args.verbose:
         print a_string
@@ -655,10 +740,12 @@ def get_file_violations(a_subdir, a_filename):
             except IOError, e:
                 pass
 
+            line = 1
             for l_data in l_contents:
                 l_violations = do_match(l_data, signature['pattern'], signature['type'])
                 if l_violations:
-                    violations.append({ "data": l_violations, "signature": signature} )
+                    violations.append({ "data": l_violations, "signature": signature, "line_number": line} )
+                line += 1
 
         else:
 
@@ -707,6 +794,13 @@ else:
         for v_details in v["violations"]:
             #print k,v_details
             if args.match:
-                print "%s has %s %s matches pattern: %s -> %s" % (v["path"], v_details["signature"]["caption"], v_details["signature"]["part"], v_details["signature"]["pattern"], v_details["data"])
+                print "%s%s has %s %s %s matches pattern %s" % (v["path"],
+                                                                ":" + str(v_details["line_number"]) if "line_number" in v_details else "",
+                                                                yellow(v_details["signature"]["caption"]),
+                                                                v_details["signature"]["part"],
+                                                                red(v_details["data"]),
+                                                                green(v_details["signature"]["pattern"]))
             else:
-                print "%s has %s %s" % (v["path"], v_details["signature"]["caption"], v_details["signature"]["part"])
+                print "%s has %s %s" % (v["path"],
+                                        yellow(v_details["signature"]["caption"]),
+                                        v_details["signature"]["part"])
