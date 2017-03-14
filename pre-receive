@@ -597,18 +597,21 @@ parser.add_argument('--first', action='store_true',
                     help='Exit on the first file that violates our rules')
 parser.add_argument('--match', action='store_true',
                     help='Print the matching value')
-parser.add_argument('--verbose', action='store_true',
-                    help='Be noisy.  Implies --match')
 parser.add_argument('--no-colour', action='store_true',
                     help='No colour output.')
 parser.add_argument('--json', action='store_true',
                     help='Produce JSON output.  Implies --no-colour, overrides --verbose')
+parser.add_argument('--sanity-filename', type=str, default=".vz_sane",
+                    help='Filename holding JSON sanity overrides in the form: [{"path": "path/to/my_dangerous_file.cc", "content": "totally_safe_ip = \\"123.111.0.0\\";"}...]')
+parser.add_argument('--warnings', action='store_true',
+                    help='Print violations that have been overriden for sanity.')
+parser.add_argument('--verbose', action='store_true',
+                    help='Be noisy.  Implies --match and --warnings')
 args = parser.parse_args()
 
 if args.verbose:
     args.match = True
-
-
+    args.warnings = True
 
 # /// \brief   echo something in red
 # /// \details
@@ -767,21 +770,46 @@ def get_file_violations(a_subdir, a_filename):
 
 # /// \brief   analyze a file
 # /// \details
-# /// \return  A list of the pattern violations from that file
+# /// \return  A list of the pattern violations (including warnings) from that file
 # /// \param   a_path     The file path to analyze
 def get_violations(a_path):
 
+    # look for the optional ".vz_sane" JSON file that defines the file/content that is deemed sane to release
+    sanity_overrides = []
+    try:
+        with open(os.path.join(a_path, args.sanity_filename), 'r') as sanity_file:
+            sanity_overrides = json.load(sanity_file)
+    except IOError, e:
+        pass
+
     violations = []
+    warnings = []
     for subdir, dirs, files in os.walk(a_path):
         if "/.git" in subdir:
+            # don't process git directories
             continue
         for file in files:
-            verbose("Analyzing %s..." % (os.path.join(subdir, file)))
+            l_path = os.path.join(subdir, file)
+            verbose("Analyzing %s..." % (l_path))
             l_violations = get_file_violations(subdir, file)
-            if l_violations:
-                violations.append({"path": os.path.join(subdir, file), "violations": l_violations})
-                if args.first:
-                    return violations
+            l_warnings = []
+            for idx,v in enumerate(l_violations):
+                for o in sanity_overrides:
+                    if ("path" in o and
+                        o["path"] == l_path and
+                        "content" in o and
+                        o["content"] == v["data"]):
+                        l_warnings.append(v)
+                        del l_violations[idx]
+
+            if (l_violations or
+                l_warnings):
+                violations.append({"path": l_path, "violations": l_violations, "warnings": l_warnings})
+
+            if (l_violations and
+                args.first):
+                return (violations, warnings)
+
     return violations
 
 # walk the entire path
@@ -804,3 +832,19 @@ else:
                 print "%s has %s %s" % (v["path"],
                                         yellow(v_details["signature"]["caption"]),
                                         v_details["signature"]["part"])
+        for v_details in v["warnings"]:
+            #print k,v_details
+            if args.match:
+                print "WARNING: %s%s has %s %s %s matches pattern %s" % (v["path"],
+                                                                            ":" + str(v_details["line_number"]) if "line_number" in v_details else "",
+                                                                            yellow(v_details["signature"]["caption"]),
+                                                                            v_details["signature"]["part"],
+                                                                            cyan(v_details["data"]),
+                                                                            green(v_details["signature"]["pattern"]))
+            else:
+                print "WARNING: %s has %s %s" % (v["path"],
+                                                 yellow(v_details["signature"]["caption"]),
+                                                 v_details["signature"]["part"])
+
+# fail if violations found
+sys.exit(1 if len(violations) > 0 else 0)
