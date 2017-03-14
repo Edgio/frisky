@@ -27,8 +27,8 @@ parser = argparse.ArgumentParser(description="pre-receive oopsy checker",
                                  formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('PATH', type=str,
                     help='The directory to analyze')
-# parser.add_argument('--peak', action='store_true',
-#                     help='Get peak Gbps for last 24 hours')
+parser.add_argument('--first', action='store_true',
+                    help='Exit on the first file that violates our rules')
 # parser.add_argument('--peak-of-peaks', action='store_true',
 #                     help='Get peak of peaks for last 24 hours')
 # parser.add_argument('--json', action='store_true',
@@ -62,8 +62,6 @@ with open("gitrob_signatures.json") as signatures_file:
 # /// \param   a_type 'regex' or 'match' to regex or exact match data with pattern
 def do_match(a_data, a_pattern, a_type):
 
-    print "data: '%s'" % a_data
-
     if a_type == "regex":
         match = re.compile(a_pattern, re.IGNORECASE).match(a_data)
         if match:
@@ -85,7 +83,7 @@ def get_file_violations(a_subdir, a_filename):
 
     violations = []
 
-    l_content = None
+    l_contents = ""
     try:
         with open(os.path.join(a_subdir, a_filename), 'r') as content_file:
             l_contents = content_file.read()
@@ -94,7 +92,7 @@ def get_file_violations(a_subdir, a_filename):
 
     # for each object in the array
     for signature in signatures:
-        print signature
+        #print signature
 
         l_data = ""
         if signature['part'] == "contents":
@@ -108,7 +106,9 @@ def get_file_violations(a_subdir, a_filename):
         else:
             print "Unknown part: '%s'" % signature['part']
 
-        violations.append(do_match(l_data, signature['pattern'], signature['type']))
+        l_violations = do_match(l_data, signature['pattern'], signature['type'])
+        if l_violations:
+            violations.append({ "data": l_violations, "signature": signature} )
 
     return violations
 
@@ -117,8 +117,16 @@ def get_file_violations(a_subdir, a_filename):
 for subdir, dirs, files in os.walk(args.PATH):
     if "/.git" in subdir:
         continue
+    violations = {}
     for file in files:
-        print os.path.join(subdir, file)
+        print "Analyzing %s..." % (os.path.join(subdir, file))
         l_violations = get_file_violations(subdir, file)
         if l_violations:
-            print "Got voilations: '%s'" % l_violations
+            violations[os.path.join(subdir, file)] = l_violations
+            if args.first:
+                break
+
+    for k,v in violations.iteritems():
+        for v_details in v:
+            print k,v_details
+            print "File %s has %s" % (k,v_details["signature"]["caption"])

@@ -442,13 +442,6 @@
   },
   {
     "part": "filename",
-    "type": "regex",
-    "pattern": "\\A*\\.pubxml(\\.user)?\\z",
-    "caption": "Potential MSBuild publish profile",
-    "description": null
-  },
-  {
-    "part": "filename",
     "type": "match",
     "pattern": "Favorites.plist",
     "caption": "Sequel Pro MySQL database manager bookmark file",
