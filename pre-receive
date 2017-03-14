@@ -1,6 +1,124 @@
-#!/bin/bash
+#!/usr/bin/env python
 
-#
-#grep -Prin "(host|host_?name|host_?addr|ip|ip_?addr|ip_?address) ?= ?['\"](1(?!(27|0|92)\.)|[2-9]+)" *
-#grep -Prin "(password|passwd|pass) ?= ?['\"](?!(['\"]))" *
-#grep -Prin "(\.(verizon|edgecast).*\.(net|com):(?!(80|443)\b))" *
+#//////////////////////////////////////////////////////////////////////////
+#//
+#// Copyright Verizon 2017
+#//
+#// Prognosis:  Analyze a repository for dangerous content
+#// Date:       3/13/17
+#// Authors:    David Andrews
+#//
+#//////////////////////////////////////////////////////////////////////////
+
+# this script receives in a provided location, or cwd, and runs the regexes provided by
+# gitrob_signatures.json, plus additional ones that are "part": "contents" to look for bad things
+
+import json
+import re
+import sys
+import os
+import argparse
+
+
+
+
+
+parser = argparse.ArgumentParser(description="pre-receive oopsy checker",
+                                 formatter_class=argparse.RawTextHelpFormatter)
+parser.add_argument('PATH', type=str,
+                    help='The directory to analyze')
+# parser.add_argument('--peak', action='store_true',
+#                     help='Get peak Gbps for last 24 hours')
+# parser.add_argument('--peak-of-peaks', action='store_true',
+#                     help='Get peak of peaks for last 24 hours')
+# parser.add_argument('--json', action='store_true',
+#                     help='Produce JSON output')
+# parser.add_argument('--marlin', action='store_true',
+#                     help='Produce Marlin-compatible JSON output')
+# parser.add_argument('--ir500', action='store_true',
+#                     help='Get results for ir500')
+# parser.add_argument('--percent', action='store_true',
+#                     help='Get percentage comparison against Cisco VNI (http://www.cisco.com/c/en/us/solutions/collateral/service-provider/visual-networking-index-vni/complete-white-paper-c11-481360.html)')
+# parser.add_argument("--region", help="The region you want to display results for: total, us, apac, eu, each (to print each).  Default: total",
+#                     action='store',
+#                     choices=['total','us','apac', 'eu', 'each'], type=str)
+args = parser.parse_args()
+
+
+signatures = None
+
+# open the file
+with open("gitrob_signatures.json") as signatures_file:
+    # parse the json
+    signatures = json.load(signatures_file)
+
+
+# /// \brief   perform a match
+# /// \details
+# /// \return  The data that matched if it dide
+# ///          None if no matches
+# /// \param   a_data  The data to match against
+# /// \param   a_pattern The pattern to run
+# /// \param   a_type 'regex' or 'match' to regex or exact match data with pattern
+def do_match(a_data, a_pattern, a_type):
+
+    print "data: '%s'" % a_data
+
+    if a_type == "regex":
+        match = re.compile(a_pattern, re.IGNORECASE).match(a_data)
+        if match:
+            return match.group(0)
+    elif a_type == "match":
+        if a_data == a_pattern:
+            return a_data
+    else:
+        print "Invalid type provided: '%s'."
+    return None
+
+
+
+# /// \brief   analyze a file
+# /// \details
+# /// \return  A list of the pattern violations from that file
+# /// \param   a_path     The file path to analyze
+def get_file_violations(a_subdir, a_filename):
+
+    violations = []
+
+    l_content = None
+    try:
+        with open(os.path.join(a_subdir, a_filename), 'r') as content_file:
+            l_contents = content_file.read()
+    except IOError, e:
+        pass
+
+    # for each object in the array
+    for signature in signatures:
+        print signature
+
+        l_data = ""
+        if signature['part'] == "contents":
+            l_data = l_contents
+        elif signature['part'] == "filename":
+            l_data = a_filename
+        elif signature['part'] == "extension":
+            l_data = os.path.splitext(a_filename)[1][1:]
+        elif signature['part'] == "path":
+            l_data = os.path.join(a_subdir, a_filename)
+        else:
+            print "Unknown part: '%s'" % signature['part']
+
+        violations.append(do_match(l_data, signature['pattern'], signature['type']))
+
+    return violations
+
+
+# walk the entire path
+for subdir, dirs, files in os.walk(args.PATH):
+    if "/.git" in subdir:
+        continue
+    for file in files:
+        print os.path.join(subdir, file)
+        l_violations = get_file_violations(subdir, file)
+        if l_violations:
+            print "Got voilations: '%s'" % l_violations

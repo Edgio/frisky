@@ -1,5 +1,26 @@
 [
   {
+      "part": "contents",
+      "type": "regex",
+      "pattern": "(host|host_?name|host_?addr|ip|ip_?addr|ip_?address) ?= ?['\"](1(?!(27|0|92)\\.)|[2-9]+)",
+      "caption": "non RFC-1918 IP address",
+      "description": null
+  },
+  {
+      "part": "contents",
+      "type": "regex",
+      "pattern": "(password|passwd|pass) ?= ?['\"](?!(['\"]))",
+      "caption": "static passwords",
+      "description": null
+  },
+  {
+      "part": "contents",
+      "type": "regex",
+      "pattern": "(\\.(verizon|edgecast|uplynk).*\\.(net|com):(?!(80|443)\b))",
+      "caption": "Verizon/EdgeCast/Uplunk host names on non-http ports",
+      "description": null
+  },
+  {
     "part": "filename",
     "type": "regex",
     "pattern": "\\A.*_rsa\\z",
