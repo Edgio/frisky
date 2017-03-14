@@ -66,15 +66,10 @@ def verbose(a_string):
 # /// \param   a_type 'regex' or 'match' to regex or exact match data with pattern
 def do_match(a_data, a_pattern, a_type):
 
-#     print """data: %s
-# pattern: %s
-# type: %s""" % (a_data, a_pattern, a_type)
-
     if a_type == "regex":
         match = re.compile(a_pattern, re.IGNORECASE).search(a_data)
         if match:
-            # DA TODO: return all contents that matched
-            return match.group(0)
+            return a_data.strip()
     elif a_type == "match":
         if a_data == a_pattern:
             return a_data
@@ -92,32 +87,39 @@ def get_file_violations(a_subdir, a_filename):
 
     violations = []
 
-    l_contents = ""
-    try:
-        with open(os.path.join(a_subdir, a_filename), 'r') as content_file:
-            l_contents = content_file.read()
-    except IOError, e:
-        pass
-
     # for each object in the array
     for signature in signatures:
         #print signature
 
         l_data = ""
         if signature['part'] == "contents":
-            l_data = l_contents
-        elif signature['part'] == "filename":
-            l_data = a_filename
-        elif signature['part'] == "extension":
-            l_data = os.path.splitext(a_filename)[1][1:]
-        elif signature['part'] == "path":
-            l_data = os.path.join(a_subdir, a_filename)
-        else:
-            print "Unknown part: '%s'" % signature['part']
 
-        l_violations = do_match(l_data, signature['pattern'], signature['type'])
-        if l_violations:
-            violations.append({ "data": l_violations, "signature": signature} )
+            l_contents = ""
+            try:
+                with open(os.path.join(a_subdir, a_filename), 'r') as content_file:
+                    l_contents = content_file.readlines()
+            except IOError, e:
+                pass
+
+            for l_data in l_contents:
+                l_violations = do_match(l_data, signature['pattern'], signature['type'])
+                if l_violations:
+                    violations.append({ "data": l_violations, "signature": signature} )
+
+        else:
+
+            if signature['part'] == "filename":
+                l_data = a_filename
+            elif signature['part'] == "extension":
+                l_data = os.path.splitext(a_filename)[1][1:]
+            elif signature['part'] == "path":
+                l_data = os.path.join(a_subdir, a_filename)
+            else:
+                print "Unknown part: '%s'" % signature['part']
+
+            l_violations = do_match(l_data, signature['pattern'], signature['type'])
+            if l_violations:
+                violations.append({ "data": l_violations, "signature": signature} )
 
     return violations
 
@@ -138,4 +140,7 @@ for subdir, dirs, files in os.walk(args.PATH):
     for k,v in violations.iteritems():
         for v_details in v:
             #print k,v_details
-            print "File %s has %s: %s matches pattern: %s" % (k, v_details["signature"]["caption"], v_details["signature"]["part"], v_details["data"])
+            if args.verbose:
+                print "%s has %s %s matches pattern: %s -> %s" % (k, v_details["signature"]["caption"], v_details["signature"]["part"], v_details["signature"]["pattern"], v_details["data"])
+            else:
+                print "%s has %s %s" % (k, v_details["signature"]["caption"], v_details["signature"]["part"])

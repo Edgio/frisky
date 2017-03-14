@@ -17,7 +17,7 @@
       "part": "contents",
       "type": "regex",
       "pattern": "(\\.(verizon|edgecast|uplynk).*\\.(net|com):(?!(80|443)\b))",
-      "caption": "Verizon/EdgeCast/Uplunk host names on non-http ports",
+      "caption": "Verizon/EdgeCast/Uplynk host names on non-http ports",
       "description": null
   },
   {
