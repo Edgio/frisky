@@ -599,11 +599,11 @@ parser.add_argument('--match', action='store_true',
                     help='Print the matching value')
 parser.add_argument('--no-colour', action='store_true',
                     help='No colour output.')
-parser.add_argument('--sanity-filename', type=str, default=".vz_sane",
-                    help='Filename holding JSON sanity overrides in the form: [{"path": "./path/to/my_dangerous_file.cc", "content": "totally_safe_ip = \\"123.111.0.0\\";"}...]')
-parser.add_argument('--generate-sanity', action="store_true", help=argparse.SUPPRESS)
+parser.add_argument('--override-filename', type=str, default=".frisky_overrides",
+                    help='Filename holding JSON overrides for violations in the form: [{"path": "./path/to/my_dangerous_file.cc", "content": "totally_safe_ip = \\"123.111.0.0\\";"}...]')
+parser.add_argument('--generate-overrides', action="store_true", help=argparse.SUPPRESS)
 parser.add_argument('--warnings', action='store_true',
-                    help='Print violations that have been overriden for sanity.')
+                    help='Print violations that have been overriden.')
 parser.add_argument('--verbose', action='store_true',
                     help='Be noisy.  Implies --match and --warnings')
 parser.add_argument('--json', action='store_true',
@@ -613,6 +613,9 @@ args = parser.parse_args()
 if args.verbose:
     args.match = True
     args.warnings = True
+
+if args.generate_overrides:
+    args.json = True
 
 # /// \brief   echo something in red
 # /// \details
@@ -775,15 +778,16 @@ def get_file_violations(a_subdir, a_filename):
 # /// \param   a_path     The file path to analyze
 def get_violations(a_path):
 
+    global is_fail
     os.chdir(a_path)
 
-    # look for the optional ".vz_sane" in top level of a_path
+    # look for the optional ".frisky_overrides" in top level of a_path
     # JSON file that defines the file/content that is deemed sane to release
     # e.g. [{"path": "./path/to/my_dangerous_file.cc", "content": "totally_safe_ip = \"123.111.0.0\";"}, ...]
-    sanity_overrides = []
+    overrides = []
     try:
-        with open(os.path.join(args.sanity_filename), 'r') as sanity_file:
-            sanity_overrides = json.load(sanity_file)
+        with open(os.path.join(args.override_filename), 'r') as override_file:
+            overrides = json.load(override_file)
     except Exception, e:
         pass
 
@@ -795,7 +799,7 @@ def get_violations(a_path):
             continue
         for file in files:
             l_path = os.path.join(subdir, file)
-            if file == ".vz_sane":
+            if file == ".frisky_overrides":
                 continue
             verbose("Analyzing %s..." % (os.path.join(a_path, file)))
             l_raw_violations = get_file_violations(subdir, file)
@@ -804,7 +808,7 @@ def get_violations(a_path):
             for idx,v in enumerate(l_raw_violations):
 
                 is_warning = False
-                for o in sanity_overrides:
+                for o in overrides:
                     if ("path" in o and
                         "content" in o and
                         o["path"] == l_path and
@@ -812,6 +816,7 @@ def get_violations(a_path):
                         l_warnings.append(v)
                         is_warning = True
                 if not is_warning:
+                    is_fail = True
                     l_violations.append(v)
 
             if (l_violations or
@@ -824,12 +829,15 @@ def get_violations(a_path):
 
     return violations
 
+is_fail = False
+
 # walk the entire path
 violations = get_violations(args.PATH)
 
+
 if args.json:
-    if args.generate_sanity:
-        #Produce special output useul for the .vz_sane file
+    if args.generate_overrides:
+        #Produce special output useul for the .frisky_overrides file
         sane = []
         for v in violations:
             for v_details in v["violations"]:
@@ -872,4 +880,5 @@ else:
                                                        v_details["signature"]["part"])
 
 # fail if violations found
-sys.exit(1 if len(violations) > 0 else 0)
+
+sys.exit(1 if is_fail else 0)
