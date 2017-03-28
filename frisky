@@ -30,7 +30,7 @@ signatures = [
   {
       "part": "contents",
       "type": "regex",
-      "pattern": "(password|passwd|pass)['\"]? ?[=:] ?['\"](?!(['\"]))",
+      "pattern": "(password|passwd|pass|pwd)['\"]? ?[=:] ?['\"]?(?!(['\"]))",
       "caption": "static passwords",
       "description": None
   },
