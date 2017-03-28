@@ -23,7 +23,7 @@ signatures = [
   {
       "part": "contents",
       "type": "regex",
-      "pattern": "(host|host_?name|host_?addr|ip|ip_?addr|ip_?address)['\"]? ?[=:] ?['\"](1(?!(27|0|92)\\.)|[2-9]+)",
+      "pattern": "(url|host|host_?name|host_?addr|ip|ip_?addr|ip_?address)['\"]? ?[=:] ?['\"]((http|http)s?://)(1(?!(27|0|92)\\.)|[2-9]+)",
       "caption": "non RFC-1918 IP address",
       "description": None
   },
