@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+
+#//////////////////////////////////////////////////////////////////////////
+#//
+#// Copyright Verizon 2017
+#//
+#// Prognosis:  Analyze a repository for dangerous content
+#// Date:       5/31/17
+#// Authors:    Hattan Shobokshi
+#//
+#//////////////////////////////////////////////////////////////////////////
+
+from github import Github
+import git
+import os 
+
+github_org_name = "Verizon"
+workspace = "workspace"
+
+def list_branches(repo,folder):
+    for branch in repo.branches:
+        workspace = "workspace/%s" % folder
+        os.system('git -C %s checkout %s -q' % (workspace,branch))
+        print "-----------"
+        print "Branch: %s" % branch
+        print "-----------"
+        os.system('./frisky --match %s ' % workspace)
+
+def list_folders():
+   folders = os.listdir("workspace")
+   for folder in folders:
+    repo = git.Repo("workspace/" + folder)
+    origin = repo.remotes.origin
+    print "******************************************************"
+    print "Project: %s" % folder
+    print "Repo: %s" % origin.url
+    print "******************************************************"
+    list_branches(repo,folder)
+    print "\n"
+
+def get_workspace_path():
+      dir_path = os.path.dirname(os.path.realpath(__file__))
+      return os.path.join(dir_path, workspace)
+
+def workspace_exists(workspace_dir):
+      return os.path.isdir(workspace_dir)
+
+def workspace_exists_check(workspace_dir):
+  if not workspace_exists(workspace_dir):
+    print "Workspace not found - creating %s" % workspace_dir
+    os.makedirs(workspace_dir)   
+
+def fetch_repos():
+  g = Github()
+  org = g.get_organization(github_org_name)
+  return org.get_repos()
+
+def clone_repo(repo,workspace_dir):
+  print "cloning %s" % workspace_dir
+  os.system("git clone " + repo.clone_url + " " + workspace_dir + "/" + repo.name)
+
+def main():
+      workspace_dir = get_workspace_path()
+      workspace_exists_check(workspace_dir)
+      for repo in fetch_repos():
+        repo_path = ("%s/%s", (workspace_dir,repo.name))    
+        clone_repo(repo,workspace_dir)
+        print "\n"
+      list_folders()
+
+if __name__ == "__main__":
+    main()      
+
+
