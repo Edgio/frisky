@@ -1,18 +1,29 @@
 #!/usr/bin/env python
 
-#//////////////////////////////////////////////////////////////////////////
-#//
-#// Copyright Verizon 2017
-#//
-#// Prognosis:  Analyze a repository for dangerous content
-#// Date:       5/31/17
-#// Authors:    Hattan Shobokshi
-#//
-#//////////////////////////////////////////////////////////////////////////
+# ----------------------------------------------------------------------------
+# Copyright (C) 2017 Verizon.  All Rights Reserved.
+# All Rights Reserved
+#
+#   Author: Hattan Shobokshi
+#   Date:   05/31/2017
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+# ------------------------------------------------------------------------------
 
 from github import Github
 import git
-import os 
+import os
 
 github_org_name = "Verizon"
 workspace = "workspace"
@@ -48,7 +59,7 @@ def workspace_exists(workspace_dir):
 def workspace_exists_check(workspace_dir):
   if not workspace_exists(workspace_dir):
     print "Workspace not found - creating %s" % workspace_dir
-    os.makedirs(workspace_dir)   
+    os.makedirs(workspace_dir)
 
 def fetch_repos():
   g = Github()
@@ -63,12 +74,10 @@ def main():
       workspace_dir = get_workspace_path()
       workspace_exists_check(workspace_dir)
       for repo in fetch_repos():
-        repo_path = ("%s/%s", (workspace_dir,repo.name))    
+        repo_path = ("%s/%s", (workspace_dir,repo.name))
         clone_repo(repo,workspace_dir)
         print "\n"
       list_folders()
 
 if __name__ == "__main__":
-    main()      
-
-
+    main()
