@@ -801,7 +801,7 @@ def get_violations(a_path):
             l_path = os.path.join(subdir, file)
             if file == ".frisky_overrides":
                 continue
-            verbose("Analyzing %s..." % (os.path.join(a_path, file)))
+            verbose("Analyzing %s..." % (l_path))
             l_raw_violations = get_file_violations(subdir, file)
             l_warnings = []
             l_violations = []
