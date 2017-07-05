@@ -48,8 +48,8 @@ signatures = [
   {
       "part": "contents",
       "type": "regex",
-      "pattern": "(\\.(verizon|edgecast|uplynk).*\\.(net|com):(?!(80|443)\b))",
-      "caption": "Verizon/EdgeCast/Uplynk host names on non-http ports",
+      "pattern": "(\\..*\\.(net|com):(?!(80|443)\b))",
+      "caption": "host names on non-http ports",
       "description": None
   },
   {
